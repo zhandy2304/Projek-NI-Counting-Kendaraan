@@ -262,6 +262,7 @@ def gen(opt):
                 # cv2.imshow(str(p), im0)
                 frame = cv2.imencode('.jpg', im0)[1].tobytes()
                 yield (b'--frame\r\n'b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                
                 if cv2.waitKey(1) == ord('q'):  # q to quit
                     raise StopIteration
 
@@ -330,6 +331,7 @@ def count_truck(box,w,h,id):
             truck += 1
             data3.append(id)
 
+# Function untuk menginpu data ke database
 def inputdata(car, truck):
     car = str(car)
     truck = str(truck)
@@ -378,9 +380,9 @@ if __name__ == '__main__':
     opt = parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
     
-    app.run(host='0.0.0.0', threaded=True, port=5000)
-    
-    while True :
-        Thread(target = inputdata(car, truck)).start()
-        
+    Thread(app.run(host='0.0.0.0', threaded=True, port=5000)).start()
 
+    # menginput data
+    # note : harus menekan CTRL + C terlebih dahulu
+    while True :
+        Thread(inputdata(car, truck)).start()
