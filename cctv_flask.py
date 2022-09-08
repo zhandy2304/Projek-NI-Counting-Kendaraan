@@ -383,6 +383,6 @@ if __name__ == '__main__':
     Thread(app.run(host='0.0.0.0', threaded=True, port=5000)).start()
 
     # menginput data
-    # note : harus menekan CTRL + C terlebih dahulu
+    # note : harus menekan CTRL C sekali
     while True :
         Thread(inputdata(car, truck)).start()
