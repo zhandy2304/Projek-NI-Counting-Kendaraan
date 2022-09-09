@@ -1,6 +1,6 @@
 # limit the number of cpus used by high performance libraries
-import asyncio
 import os
+from cctv3 import pelanggaran
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -23,6 +23,9 @@ import torch
 import torch.backends.cudnn as cudnn
 from cctv1 import detect
 from flask import Flask, render_template, Response
+from datetime import datetime
+import pyautogui
+import numpy as np
 
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.downloads import attempt_download
@@ -47,10 +50,12 @@ count = 0
 car = 0
 truck = 0
 bus = 0
+pelanggaran = 0
 data = []
 data1 = []
 data2 = []
 data3 = []
+data4 = []
 
 # buka koneksi
 mysql = mysql.connector.connect(user='root', 
@@ -101,6 +106,9 @@ def gen(opt):
         os.makedirs(out)  # make new output folder
 
     # Directories
+    if not os.path.exists('pelanggaran'):
+        os.makedirs('pelanggaran')
+
     save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
     save_dir.mkdir(parents=True, exist_ok=True)  # make dir
 
@@ -142,6 +150,7 @@ def gen(opt):
     if pt and device.type != 'cpu':
         model(torch.zeros(1, 3, *imgsz).to(device).type_as(next(model.model.parameters())))  # warmup
     dt, seen = [0.0, 0.0, 0.0, 0.0], 0
+
     for frame_idx, (path, img, im0s, vid_cap, s) in enumerate(dataset):
         t1 = time_sync()
         img = torch.from_numpy(img).to(device)
@@ -213,6 +222,8 @@ def gen(opt):
                             count_truck(bboxes,w,h,id)
                         if names[c] == 'bus':
                             count_truck(bboxes,w,h,id)
+                        if names[c] == 'motorcycle' or names[c] == 'person' or names[c] == 'bicycle':
+                            count_pelanggaran(bboxes,w,h,id)
                         annotator.box_label(bboxes, label, color=colors(c, True))
                         
 
@@ -236,26 +247,29 @@ def gen(opt):
             # Stream results
             im0 = annotator.result()
             if show_vid:
-                global count, car, truck, bus
+                global count, car, truck, bus, pelanggaran
                 color=(0,255,0)
                 start_point = (280, h-260)
                 end_point = (410, h-250)
                 start_point1 = (220, h-240)
-                end_point1 = (410, h-230)
-                cv2.line(im0, start_point, end_point, color, thickness=2)
-                cv2.line(im0, start_point1, end_point1, color, thickness=2)
-                thickness = 2
+                end_point1 = (410, h-225)
+                cv2.line(im0, start_point, end_point, color, thickness=1)
+                cv2.line(im0, start_point1, end_point1, color, thickness=1)
+                thickness = 1
                 org = (50, 50)
-                org1=(50, 100)
-                org2=(50, 150)
-                org3=(50, 200)
+                org1=(50, 80)
+                org2=(50, 110)
+                org3=(50, 140)
+                
                 font = cv2.FONT_HERSHEY_SIMPLEX
-                fontScale = 1
+                fontScale = 0.5
                 cv2.putText(im0,'total = ' + str(count), org, font, 
                 fontScale, color, thickness, cv2.LINE_AA)
                 cv2.putText(im0,'car = ' + str(car), org1, font, 
                 fontScale, color, thickness, cv2.LINE_AA)
                 cv2.putText(im0,'truck and bus = ' + str(truck), org2, font, 
+                fontScale, color, thickness, cv2.LINE_AA)
+                cv2.putText(im0,'pelanggaran = ' + str(pelanggaran), org3, font, 
                 fontScale, color, thickness, cv2.LINE_AA)
                 # cv2.putText(im0,'bus= ' + str(bus), org3, font, 
                 # fontScale, color, thickness, cv2.LINE_AA)
@@ -330,6 +344,20 @@ def count_truck(box,w,h,id):
         if  id not in data3:
             truck += 1
             data3.append(id)
+
+def count_pelanggaran(box,w,h,id):
+    global pelanggaran,data4
+    center_coordinates = (int(box[0]+(box[2]-box[0])/2) , int(box[1]+(box[3]-box[1])/2))
+    if int(box[1]+(box[3]-box[1])/2) > (h-263) :
+        if  id not in data4:
+            pelanggaran += 1
+            data4.append(id)
+
+            # untuk screenshoot
+            # curr_datetime = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
+            # image = pyautogui.screenshot()
+            # image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+            # cv2.imwrite("pelanggaran - " + str(pelanggaran) + "-" + str(curr_datetime) +".png", image)
 
 # Function untuk menginpu data ke database
 def inputdata(car, truck):
