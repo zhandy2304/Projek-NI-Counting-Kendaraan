@@ -26,6 +26,9 @@ from flask import Flask, render_template, Response
 from datetime import datetime
 import pyautogui
 import numpy as np
+import smtplib
+import ssl
+from email.message import EmailMessage
 
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.downloads import attempt_download
@@ -64,6 +67,35 @@ mysql = mysql.connector.connect(user='root',
                                 database='jalan_toll');
 
 mysqlCursor = mysql.cursor();
+
+# Define email sender and receiver
+email_sender = 'cctv.toll.makassar@gmail.com' #email pengirim dan password
+email_password = 'sewacxxwovartslq'
+email_receiver = 'ahmadzdy230401@gmail.com' #email penerima
+
+# Set the subject and body of the email
+subject = 'Terjadi Pelanggaran di Jalan Toll !!'
+
+body = """
+Telah terjadi Pelanggaran Lalu Lintas!!!
+
+MOHON SEGERA DI TINDAK
+"""
+
+em = EmailMessage()
+em['From'] = email_sender
+em['To'] = email_receiver
+em['Subject'] = subject
+em.set_content(body)
+
+s = smtplib.SMTP('smtp.gmail.com')
+# start TLS for security
+s.starttls()
+s.login(email_sender, email_password)
+
+# Add SSL (layer of security)
+context = ssl.create_default_context()
+
 
 @app.route('/')
 def index():
@@ -223,6 +255,7 @@ def gen(opt):
                         if names[c] == 'bus':
                             count_truck(bboxes,w,h,id)
                         if names[c] == 'motorcycle' or names[c] == 'person' or names[c] == 'bicycle':
+                    
                             count_pelanggaran(bboxes,w,h,id)
                         annotator.box_label(bboxes, label, color=colors(c, True))
                         
@@ -352,6 +385,8 @@ def count_pelanggaran(box,w,h,id):
         if  id not in data4:
             pelanggaran += 1
             data4.append(id)
+    # Mengirimkan email
+    s.sendmail(email_sender, email_receiver, em.as_string())
 
             # untuk screenshoot
             # curr_datetime = datetime.now().strftime('%Y-%m-%d %H-%M-%S')
